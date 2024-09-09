@@ -13,7 +13,7 @@ void vector_producto(float *A, float *v1, float *v2, int matriz_m){
 
 int main(){
 	float *A, *v1, *v2;
-	int matriz_m = 3;
+	int matriz_m = 40000;
 
 	A = (float *)malloc(matriz_m * matriz_m * sizeof(float));
 	v1 = (float *)malloc(matriz_m * sizeof(float));
@@ -22,13 +22,13 @@ int main(){
 	for(int i = 0; i < matriz_m; i++){
 		for(int j = 0; j < matriz_m; j++){
 			A[i * matriz_m + j] = (float) i * matriz_m + j;
-			printf("A[i] = %.2f\n", A[i * matriz_m + j]);
+			//printf("A[i] = %.2f\n", A[i * matriz_m + j]);
 		}
 	}
 
 	for(int i = 0; i < matriz_m; i++){
 		v1[i] = (float) i;
-		printf("v1[i] = %.2f\n", v1[i]);
+		//printf("v1[i] = %.2f\n", v1[i]);
 	}
 	vector_producto(A, v1, v2, matriz_m);
 
