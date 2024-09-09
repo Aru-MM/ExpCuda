@@ -17,9 +17,9 @@ int main(int argc, char **argv){
 	float *v1, *v1_gpu;
 	float *v2, *v2_gpu;
 
-	int matriz_m = 40000;
+	int matriz_m = 4;
 
-	dim3 block_shape = dim3(32,32);
+	dim3 block_shape = dim3(4,4);
 	dim3 grid_shape = dim3(max(1.0, ceil((float)matriz_m / (float) block_shape.x)),
 			max(1.0, ceil((float)matriz_m / (float) block_shape.x)));
 	
