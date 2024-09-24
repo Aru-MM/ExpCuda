@@ -18,7 +18,7 @@ __global__ void vector_producto(float *A, float *B, float *C, int matriz_m){
 int main(int argc, char **argv){
 	
 	//Numero de elementos y su tamaño
-	int matriz_m = 400000;
+	int matriz_m = 400000000;
 
 	// Variables de locales
 	float *A = (float *)malloc(matriz_m * sizeof(float));

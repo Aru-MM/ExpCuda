@@ -12,7 +12,7 @@ int main(int argc, char **argv){
 	float *B;
 	float *C;
 
-	int matriz_m = 400000;
+	int matriz_m = 50000;
 	
 	A = (float *)malloc(matriz_m * sizeof(float));
 	B = (float *)malloc(matriz_m * sizeof(float));
@@ -35,9 +35,9 @@ int main(int argc, char **argv){
 	vector_producto(A, B, C, matriz_m);
 
 	/*printf("C = ");*/
-	for(int i = 0; i < matriz_m; i ++){
+	/*for(int i = 0; i < matriz_m; i ++){*/
 		/*printf("%.2f ", C[i]);*/
-	}
+	/*}*/
 	/*printf("\n");*/
 
 	free(A);
