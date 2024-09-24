@@ -12,33 +12,33 @@ int main(int argc, char **argv){
 	float *B;
 	float *C;
 
-	int matriz_m = 4;
+	int matriz_m = 400000;
 	
 	A = (float *)malloc(matriz_m * sizeof(float));
 	B = (float *)malloc(matriz_m * sizeof(float));
 	C = (float *)malloc(matriz_m * sizeof(float));
 
-	printf("A = ");
+	/*printf("A = ");*/
 	for(int i = 0; i < matriz_m; i++){
 		A[i] = (float) i;
-		printf("%.2f ", A[i]);
+		/*printf("%.2f ", A[i]);*/
 	}
-	printf("\n");
+	/*printf("\n");*/
 
-	printf("B = ");
+	/*printf("B = ");*/
 	for(int i = 0; i < matriz_m; i++){
 		B[i] = (float) i;
-		printf("%.2f ", B[i]);
+		/*printf("%.2f ", B[i]);*/
 	}
-	printf("\n");
+	/*printf("\n");*/
 
 	vector_producto(A, B, C, matriz_m);
 
-	printf("C = ");
+	/*printf("C = ");*/
 	for(int i = 0; i < matriz_m; i ++){
-		printf("%.2f ", C[i]);
+		/*printf("%.2f ", C[i]);*/
 	}
-	printf("\n");
+	/*printf("\n");*/
 
 	free(A);
 	free(B);
