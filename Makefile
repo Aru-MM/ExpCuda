@@ -1,31 +1,29 @@
 ################################################################################
+# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
 #
-# Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
 #
-# NOTICE TO USER:
-#
-# This source code is subject to NVIDIA ownership rights under U.S. and
-# international Copyright laws.
-#
-# NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
-# CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
-# IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
-# REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
-# IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
-# OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
-# OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
-# OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
-# OR PERFORMANCE OF THIS SOURCE CODE.
-#
-# U.S. Government End Users.  This source code is a "commercial item" as
-# that term is defined at 48 C.F.R. 2.101 (OCT 1995), consisting  of
-# "commercial computer software" and "commercial computer software
-# documentation" as such terms are used in 48 C.F.R. 12.212 (SEPT 1995)
-# and is provided to the U.S. Government only as a commercial end item.
-# Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
-# 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
-# source code with only those rights set forth herein.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 ################################################################################
 #
@@ -34,7 +32,7 @@
 ################################################################################
 
 # Location of the CUDA Toolkit
-CUDA_PATH ?= /usr/local/cuda-10.2
+CUDA_PATH ?= /usr/local/cuda
 
 ##############################
 # start deprecated interface #
@@ -74,9 +72,9 @@ endif
 # architecture
 HOST_ARCH   := $(shell uname -m)
 TARGET_ARCH ?= $(HOST_ARCH)
-ifneq (,$(filter $(TARGET_ARCH),x86_64 aarch64 ppc64le armv7l))
+ifneq (,$(filter $(TARGET_ARCH),x86_64 aarch64 sbsa ppc64le armv7l))
     ifneq ($(TARGET_ARCH),$(HOST_ARCH))
-        ifneq (,$(filter $(TARGET_ARCH),x86_64 aarch64 ppc64le))
+        ifneq (,$(filter $(TARGET_ARCH),x86_64 aarch64 sbsa ppc64le))
             TARGET_SIZE := 64
         else ifneq (,$(filter $(TARGET_ARCH),armv7l))
             TARGET_SIZE := 32
@@ -87,8 +85,17 @@ ifneq (,$(filter $(TARGET_ARCH),x86_64 aarch64 ppc64le armv7l))
 else
     $(error ERROR - unsupported value $(TARGET_ARCH) for TARGET_ARCH!)
 endif
+
+# sbsa and aarch64 systems look similar. Need to differentiate them at host level for now.
+ifeq ($(HOST_ARCH),aarch64)
+    ifeq ($(CUDA_PATH)/targets/sbsa-linux,$(shell ls -1d $(CUDA_PATH)/targets/sbsa-linux 2>/dev/null))
+        HOST_ARCH := sbsa
+        TARGET_ARCH := sbsa
+    endif
+endif
+
 ifneq ($(TARGET_ARCH),$(HOST_ARCH))
-    ifeq (,$(filter $(HOST_ARCH)-$(TARGET_ARCH),aarch64-armv7l x86_64-armv7l x86_64-aarch64 x86_64-ppc64le))
+    ifeq (,$(filter $(HOST_ARCH)-$(TARGET_ARCH),aarch64-armv7l x86_64-armv7l x86_64-aarch64 x86_64-sbsa x86_64-ppc64le))
         $(error ERROR - cross compiling from $(HOST_ARCH) to $(TARGET_ARCH) is not supported!)
     endif
 endif
@@ -106,6 +113,10 @@ ifeq (,$(filter $(TARGET_OS),linux darwin qnx android))
 endif
 
 # host compiler
+ifdef HOST_COMPILER
+ CUSTOM_HOST_COMPILER = 1
+endif
+
 ifeq ($(TARGET_OS),darwin)
     ifeq ($(shell expr `xcodebuild -version | grep -i xcode | awk '{print $$2}' | cut -d'.' -f1` \>= 5),1)
         HOST_COMPILER ?= clang++
@@ -143,6 +154,8 @@ else ifneq ($(TARGET_ARCH),$(HOST_ARCH))
         else ifeq ($(TARGET_OS), android)
             HOST_COMPILER ?= aarch64-linux-android-clang++
         endif
+    else ifeq ($(TARGET_ARCH),sbsa)
+        HOST_COMPILER ?= aarch64-linux-gnu-g++
     else ifeq ($(TARGET_ARCH),ppc64le)
         HOST_COMPILER ?= powerpc64le-linux-gnu-g++
     endif
@@ -156,6 +169,19 @@ CCFLAGS     :=
 LDFLAGS     :=
 
 # build flags
+
+# Link flag for customized HOST_COMPILER with gcc realpath
+GCC_PATH := $(shell which gcc)
+ifeq ($(CUSTOM_HOST_COMPILER),1)
+    ifneq ($(filter /%,$(HOST_COMPILER)),)
+        ifneq ($(findstring gcc,$(HOST_COMPILER)),)
+            ifneq ($(GCC_PATH),$(HOST_COMPILER))
+                LDFLAGS += -lstdc++
+            endif
+        endif
+    endif
+endif
+
 ifeq ($(TARGET_OS),darwin)
     LDFLAGS += -rpath $(CUDA_PATH)/lib
     CCFLAGS += -arch $(HOST_ARCH)
@@ -192,12 +218,13 @@ ifneq ($(TARGET_ARCH),$(HOST_ARCH))
             LDFLAGS += -rpath-link=$(TARGET_FS)/usr/lib -L$(TARGET_FS)/usr/lib
             LDFLAGS += -rpath-link=$(TARGET_FS)/usr/lib/aarch64-linux-gnu -L$(TARGET_FS)/usr/lib/aarch64-linux-gnu
             LDFLAGS += --unresolved-symbols=ignore-in-shared-libs
-            CCFLAGS += -isystem=$(TARGET_FS)/usr/include  -I$(TARGET_FS)/usr/include
+            CCFLAGS += -isystem=$(TARGET_FS)/usr/include -I$(TARGET_FS)/usr/include -I$(TARGET_FS)/usr/include/libdrm
             CCFLAGS += -isystem=$(TARGET_FS)/usr/include/aarch64-linux-gnu -I$(TARGET_FS)/usr/include/aarch64-linux-gnu
         endif
     endif
     ifeq ($(TARGET_ARCH)-$(TARGET_OS),aarch64-qnx)
-        NVCCFLAGS += --qpp-config 5.4.0,gcc_ntoaarch64le
+        NVCCFLAGS += -D_QNX_SOURCE
+        NVCCFLAGS += --qpp-config 8.3.0,gcc_ntoaarch64le
         CCFLAGS += -DWIN_INTERFACE_CUSTOM -I/usr/include/aarch64-qnx-gnu
         LDFLAGS += -lsocket
         LDFLAGS += -L/usr/lib/aarch64-qnx-gnu
@@ -226,6 +253,8 @@ ifeq ($(TARGET_ARCH)-$(TARGET_OS),armv7l-linux)
     CUDA_INSTALL_TARGET_DIR = targets/armv7-linux-gnueabihf/
 else ifeq ($(TARGET_ARCH)-$(TARGET_OS),aarch64-linux)
     CUDA_INSTALL_TARGET_DIR = targets/aarch64-linux/
+else ifeq ($(TARGET_ARCH)-$(TARGET_OS),sbsa-linux)
+    CUDA_INSTALL_TARGET_DIR = targets/sbsa-linux/
 else ifeq ($(TARGET_ARCH)-$(TARGET_OS),armv7l-android)
     CUDA_INSTALL_TARGET_DIR = targets/armv7-linux-androideabi/
 else ifeq ($(TARGET_ARCH)-$(TARGET_OS),aarch64-android)
@@ -260,16 +289,16 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(LDFLAGS))
 ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for CUDA
-INCLUDES  := -I../../common/inc
+INCLUDES  := -I../../../Common
 LIBRARIES :=
 
 ################################################################################
 
 # Gencode arguments
-ifeq ($(TARGET_ARCH),$(filter $(TARGET_ARCH),armv7l aarch64))
-SMS ?= 30 32 53 61 62 70 72 75
+ifeq ($(TARGET_ARCH),$(filter $(TARGET_ARCH),armv7l aarch64 sbsa))
+SMS ?= 53 61 70 72 75 80 86 87 90
 else
-SMS ?= 30 61 70 75
+SMS ?= 50 52 60 61 70 75 80 86 89 90
 endif
 
 ifeq ($(SMS),)
@@ -287,6 +316,8 @@ ifneq ($(HIGHEST_SM),)
 GENCODE_FLAGS += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
+
+ALL_CCFLAGS += --threads 0 --std=c++11
 
 ifeq ($(SAMPLE_ENABLED),0)
 EXEC ?= @echo "[@]"
@@ -311,14 +342,16 @@ sum_vector.o:sum_vector.cu
 
 sum_vector: sum_vector.o
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-	$(EXEC) mkdir -p ../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)
-	$(EXEC) cp $@ ../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)
+	$(EXEC) mkdir -p ../../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)
+	$(EXEC) cp $@ ../../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)
 
 run: build
 	$(EXEC) ./sum_vector
 
+testrun: build
+
 clean:
 	rm -f sum_vector sum_vector.o
-	rm -rf ../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)/sum_vector
+	rm -rf ../../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)/sum_vector
 
 clobber: clean

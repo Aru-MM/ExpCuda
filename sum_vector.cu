@@ -18,7 +18,7 @@ __global__ void vector_producto(float *A, float *B, float *C, int matriz_m){
 int main(int argc, char **argv){
 	
 	//Numero de elementos y su tamaño
-	int matriz_m = 400000000;
+	int matriz_m = 400;
 
 	// Variables de locales
 	float *A = (float *)malloc(matriz_m * sizeof(float));
@@ -79,9 +79,9 @@ int main(int argc, char **argv){
 	cudaMemcpy(C, C_gpu, matriz_m * sizeof(float), cudaMemcpyDeviceToHost);
 
 	//printf("C = ");
-	//for(int i = 0; i < matriz_m; i ++){
-		//printf("%.2f ", C[i]);
-	//}
+	for(int i = 0; i < matriz_m; i ++){
+		printf("%.2f ", C[i]);
+	}
 	//printf("\n");
 
 	//Libera la memoria local
